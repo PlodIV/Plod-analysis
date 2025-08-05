@@ -15,24 +15,39 @@ st.title("📈 ASX 200 Daily Forecasting Tool")
 
 @st.cache_data
 def load_data():
-    asx = yf.download("^AXJO", start="2015-01-01")
-    sp500 = yf.download("^GSPC", start="2015-01-01")
-    audusd = yf.download("AUDUSD=X", start="2015-01-01")
-    oil = yf.download("CL=F", start="2015-01-01")
+    # Download all required series
+    asx = yf.download("^AXJO", start="2015-01-01")['Close']
+    sp500 = yf.download("^GSPC", start="2015-01-01")['Close']
+    audusd = yf.download("AUDUSD=X", start="2015-01-01")['Close']
+    oil = yf.download("CL=F", start="2015-01-01")['Close']
+
+    # Combine into one DataFrame (align by date)
+    df = pd.concat([asx, sp500, audusd, oil], axis=1)
+    df.columns = ['ASX', 'SP500', 'AUDUSD', 'OIL']
     
-    df = asx.copy()
-    df['Return'] = df['Close'].pct_change()
-    df['SP500'] = sp500['Close'].pct_change()
-    df['AUDUSD'] = audusd['Close'].pct_change()
-    df['OIL'] = oil['Close'].pct_change()
-    
-    df['RSI'] = RSIIndicator(close=df['Close'], window=14).rsi()
-    df['MACD'] = MACD(close=df['Close']).macd_diff()
+    # Drop rows with missing data
+    df.dropna(inplace=True)
+
+    # Compute returns
+    df['Return'] = df['ASX'].pct_change()
+    df['SP500'] = df['SP500'].pct_change()
+    df['AUDUSD'] = df['AUDUSD'].pct_change()
+    df['OIL'] = df['OIL'].pct_change()
+
+    # Add technical indicators (on ASX price)
+    df['RSI'] = RSIIndicator(close=df['ASX'], window=14).rsi()
+    df['MACD'] = MACD(close=df['ASX']).macd_diff()
+
+    # Lagged returns
     df['Lag1'] = df['Return'].shift(1)
     df['Lag2'] = df['Return'].shift(2)
+
+    # Target variable
     df['Direction'] = (df['Return'].shift(-1) > 0).astype(int)
-    
-    return df.dropna()
+
+    # Drop any remaining NaNs
+    df.dropna(inplace=True)
+    return df
 
 df = load_data()
 st.subheader("Market Overview")
