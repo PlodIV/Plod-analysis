@@ -51,7 +51,7 @@ def load_data():
 
 df = load_data()
 st.subheader("Market Overview")
-st.line_chart(df['Close'])
+st.line_chart(df['ASX'])
 
 # Feature selection
 features = ['Lag1', 'Lag2', 'RSI', 'MACD', 'SP500', 'AUDUSD', 'OIL']
